@@ -1,0 +1,8 @@
+{
+  // forever config for NS Departures slack bot
+  "uid": "app",
+  "outFile": "../log/all.log",
+  "append": true, // append the logs, do not overwrite
+  "command": "npm run prod",
+  "script": "./"  // main startup script (almost like issuing node server.js)
+}

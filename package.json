@@ -1,0 +1,53 @@
+{
+  "name": "ns-departures-slackbot",
+  "version": "1.0.0",
+  "description": "NS Departures Slackbot",
+  "main": "src/index.js",
+  "nodemonConfig": {
+    "ignore": [
+      "data/users.json"
+    ],
+    "verbose": true,
+    "execMap": {
+      "js": "npm run dev"
+    }
+  },
+  "dependencies": {
+    "axios": "^0.19.2",
+    "body-parser": "^1.18.2",
+    "config": "^1.28.1",
+    "cron": "^1.8.2",
+    "express": "^4.16.2",
+    "forever": "^2.0.0",
+    "google-spreadsheet": "^3.0.8",
+    "morgan": "^1.9.0",
+    "nodemon": "^2.0.2",
+    "request": "^2.83.0",
+    "tracer": "^0.8.11"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.8.4",
+    "@babel/node": "^7.8.4",
+    "@babel/polyfill": "^7.8.3",
+    "@babel/preset-env": "^7.8.4",
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-plugin-import": "^2.20.1"
+  },
+  "scripts": {
+    "dev": "NODE_ENV=development babel-node src/index.js",
+    "build": "babel src --out-dir dist/ --copy-files",
+    "prod": "NODE_ENV=production node dist/index.js",
+    "lint": "eslint src"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mirkovw/ns-departures-slackbot.git"
+  },
+  "author": "Mirko van Willigenburg",
+  "license": "MIT",
+  "engines": {
+    "node": "12.x"
+  }
+}

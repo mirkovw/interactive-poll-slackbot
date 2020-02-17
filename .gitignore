@@ -1,0 +1,5 @@
+/node_modules
+/data/users.json
+development.json
+production.json
+/.idea
