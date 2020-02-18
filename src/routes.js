@@ -1,5 +1,6 @@
 import express from 'express';
 import { log } from './utils';
+import { handlePollAnswer } from './slack/utils';
 
 const router = new express.Router();
 
@@ -12,7 +13,7 @@ router.get('/', async (req, res) => {
     //     log.error(err);
     //     return res.status(500).send('Something blew up. We\'re looking into it.');
     // }
-    res.send("Home Page")
+    res.send('Home Page');
 });
 
 router.post('/slack/commands/ns', async (req, res) => {
@@ -24,10 +25,29 @@ router.post('/slack/commands/ns', async (req, res) => {
     //     log.error(err);
     //     return res.status(500).send('Something blew up. We\'re looking into it.');
     // }
-    log.info("/slack/commands/ns")
+    log.info('/slack/commands/ns');
 });
 
 router.post('/slack/actions', async (req, res) => {
+    try {
+        const payload = JSON.parse(req.body.payload);
+        // const { user } = payload; // find user
+
+        // log.info(payload);
+
+        if (payload.type === 'block_actions') {
+            const [actions] = payload.actions;
+
+            if (actions.value === 'pollAnswer') {
+                handlePollAnswer(payload);
+            }
+        }
+        return res.status(200).json(); // typical ack response
+    } catch (err) {
+        log.error(err);
+        return res.status(500).send('Something blew up. We\'re looking into it.');
+    }
+
     // try {
     //     const payload = JSON.parse(req.body.payload);
     //     const user = await findUser(payload.user.id); // find user
@@ -48,7 +68,7 @@ router.post('/slack/actions', async (req, res) => {
     //     return res.status(500).send('Something blew up. We\'re looking into it.');
     // }
 
-    log.info("/slack/actions")
+    log.info('/slack/actions');
 });
 
 export default router;

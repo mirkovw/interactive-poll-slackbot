@@ -5,6 +5,7 @@ import http from 'http';
 import bootstrap from './bootstrap';
 import { log } from './utils';
 import googleSheet from './google/sheets';
+import { createPoll } from './slack/utils';
 // import cronSchedule from './slack/cron';
 
 const app = express();
@@ -13,9 +14,10 @@ app.start = async () => {
     log.info('Starting Server now...');
 
     // cronSchedule.start();
+    createPoll();
 
-    const mySheet = googleSheet();
-    log.info(mySheet);
+    // const mySheet = googleSheet();
+    // log.info(mySheet);
 
     const port = config.get('common.port');
     app.set('port', port);
