@@ -2,14 +2,21 @@ import config from 'config';
 import axios from 'axios';
 import {
     log,
+    getDateStr,
+    returnRandom,
 } from '../utils';
 import {
     composePollMsg,
+    composeContextBlock,
 } from './blocks';
 
-import getSheetData from '../google/sheets';
-
-const returnRandom = (arr) => arr[Math.floor(arr.length * Math.random())];
+import {
+    getSheetData,
+    updateResults,
+    updateUsers,
+    checkAnswer,
+    checkIfNewAnswer,
+} from '../google/sheets';
 
 const findChannels = async () => {
     try {
@@ -36,8 +43,7 @@ const sendPoll = async (msg, targetChannels) => {
         }, {
             headers: { Authorization: `Bearer ${config.get('slack.botToken')}` },
         });
-
-        return true;
+        return result;
     } catch (err) {
         log.error(err);
         return false;
@@ -45,31 +51,34 @@ const sendPoll = async (msg, targetChannels) => {
 };
 
 export const createPoll = async () => {
-    const sheetRows = await getSheetData(0);
+    const sheetRows = await getSheetData(0).then((sheet)=>sheet.getRows());
     const availablePolls = sheetRows.filter((row) => row.PollUsed === 'NO');
     const randomPoll = returnRandom(availablePolls);
-    const msg = composePollMsg(randomPoll);
-    const targetChannels = await findChannels();
-
-    for (let i = 0; i < targetChannels.length; i += 1) {
-        sendPoll(msg, targetChannels[i]);
+    // Add new row in results with UniqueId and DateShown
+    const resultSheet = await getSheetData(1);
+    const resultSheetRows = await resultSheet.getRows();
+    const isNewResult = resultSheetRows.filter((row) => row.UniqueId === randomPoll.UniqueId).length === 0;
+    if (isNewResult) {
+        const newRow = await resultSheet.addRow({
+            UniqueId: randomPoll.UniqueId,
+            DateShown: getDateStr(),
+        });
+        await newRow.save();
+        // Compose new poll
+        const msg = composePollMsg(randomPoll);
+        const targetChannels = await findChannels();
+        sendPoll(msg, targetChannels[targetChannels.length-1]);
+        for (let i = 0; i < 1; i += 1) {
+            //sendPoll(msg, targetChannels[i]);
+        }
+    }
+    else {
+        // Respond in channel - cant make new poll
+        let responseStr = 'Can\'t make new poll as there is already a result for this poll in the results list'
+        log.info(responseStr);
+        return false;
     }
 };
-
-const checkAnswer = async (pollId, answer) => {
-    const sheetRows = await getSheetData(0);
-    const poll = sheetRows.filter((row) => row.UniqueId === pollId);
-    return poll[0].CorrectOption === answer;
-};
-
-const checkIfNewAnswer = async (pollId, userId) => {
-    const sheetRows = await getSheetData(2);
-    const user = sheetRows.filter((row) => row.UserId === userId);
-
-    if (user.length === 0) return true; // new user
-    return user[0].Participations.split(',').includes(pollId);
-};
-
 
 export const handlePollAnswer = async (payload) => {
     const userId = payload.user.id;
@@ -77,139 +86,83 @@ export const handlePollAnswer = async (payload) => {
     const pollId = payload.actions[0].block_id;
     const answer = payload.actions[0].action_id;
 
+    log.info('Checking if new answer..')
     const newAnswer = await checkIfNewAnswer(pollId, userId);
+    log.info('Answer new: ' + newAnswer);
 
+    if (!newAnswer) {
+        log.info('User already submitted answer. Exiting.');
+        try {
+            axios.post('https://slack.com/api/chat.postEphemeral', {
+                channel: payload.container.channel_id,
+                user: payload.user.id,
+                //text: 'You already submitted an answer.',
+                blocks: [composeContextBlock('You already submitted an answer.')],
+            }, {
+                headers: { Authorization: `Bearer ${config.get('slack.botToken')}` },
+            });
+            return false;
+        } catch (err) {
+            log.error(err);
+        }
+    }
+
+    log.info('Checking if correct answer..')
     const answerCorrect = await checkAnswer(pollId, answer);
+    log.info('Answer correct: ' + answerCorrect)
 
-    // first, we update the userlist
-    // await updateUserList(payload);
+    log.info('Updating results...');
+    const user = await updateResults(pollId, userId, answerCorrect);
+    log.info('Results updated.');
 
-    // then we update the results list
-    // await updateResultsList(payload);
+    log.info('Updating user...');
+    await updateUsers(userId, userName, user.isWinner, answerCorrect, pollId);
+    log.info('User updated.');
 
+    // update original poll message block with updated info (x users submitted)
+    const originalMsg = payload.message.blocks;
+    if (originalMsg.length === 3) {
+        const newBlock = composeContextBlock('`1 Monk has answered`');
+        originalMsg.splice(2, 0, newBlock);
 
-    log.info(answerCorrect);
+    } else {
+        let origText = originalMsg[2].elements[0].text;
+        let newText = '`'+(parseInt(origText.substr(1,1))+1) + " Monks have answered"+'`';
+        originalMsg[2].elements[0].text = newText;
+    }
+
+    try {
+        axios.post('https://slack.com/api/chat.update', {
+            channel: payload.container.channel_id,
+            ts: payload.message.ts,
+            blocks: originalMsg,
+        }, {
+            headers: { Authorization: `Bearer ${config.get('slack.botToken')}` },
+        });
+    } catch (err) {
+        log.error(err);
+    }
+
+    try {
+        axios.post('https://slack.com/api/chat.postEphemeral', {
+            channel: payload.container.channel_id,
+            user: payload.user.id,
+            blocks: [composeContextBlock('Your answer has been recorded.')],
+        }, {
+            headers: { Authorization: `Bearer ${config.get('slack.botToken')}` },
+        });
+        return false;
+    } catch (err) {
+        log.error(err);
+    }
 };
 
-
-// export const handleCommand = async (payload) => {
-//     let msg;
-//     let msgUpdate;
-
-//     let user = await findUser(payload.user_id);
-//     if (user === undefined) user = await writeUser(newUser(payload));
-
-//     if (payload.command === '/ns') {
-//         const isSettings = payload.text.toLocaleLowerCase() === 'settings' || (payload.text === '' && user.station === 'NONE');
-//         const responseType = isSettings ? 'ephemeral' : 'in_channel';
-
-//         if (isSettings) {
-//             log.info(`${user.userName} request settings`);
-//             msg = await composeSettingsMsg(user); // send settings page
-//         } else {
-//             const station = payload.text !== '' ? findStation(payload.text) : findStation(user.station);
-//             log.info(`${user.userName} REQUEST DEPARTURES FOR ${station.label.toUpperCase()}`);
-//             const departures = await getNsData(station);
-//             msg = await composeDeparturesMsg(user, station, departures);
-
-//             if (station.label !== user.station) {
-//                 msgUpdate = composeUpdateDefaultMsg(user, station);
-//             }
-//         }
-
-//         if (msgUpdate) await respondCustom(payload.response_url, { response_type: 'ephemeral', blocks: msgUpdate.blocks });
-//         return { response_type: responseType, replace_original: false, blocks: msg.blocks };
-//     }
-//     return false;
-// };
-
-// export const updateDefaultStation = async (payload, userParam) => {
-//     const user = userParam;
-//     const station = findStation(payload.actions[0].value);
-//     user.station = station.label; // update default station in user object
-//     await writeUser(user); // write user object to json
-
-//     log.info(`UPDATED DEFAULT STATION TO ${station.label.toUpperCase()}`);
-
-//     return respondCustom(payload.response_url, {
-//         replace_original: true,
-//         blocks: composeUpdateDefaultConfirmMsg(station).blocks,
-//     });
-// };
-
-
-// export const updateNotifications = async (payload, userParam) => {
-//     let user = userParam;
-//     user.updateSettings.channelId = payload.container.channel_id;
-//     user.updateSettings.ts = payload.container.message_ts;
-//     user.updateSettings.responseUrl = payload.response_url;
-//     user = await writeUser(user);
-//     log.info(`UPDATE NOTIFICATIONS FOR ${user.userName}`);
-
-//     const view = composeNotificationsModal(user);
-
-//     return respondCustom('https://slack.com/api/views.open', {
-//         trigger_id: payload.trigger_id,
-//         view,
-//     }, {
-//         headers: { Authorization: `Bearer ${config.get('slack.botToken')}` },
-//     });
-// };
-
-
-// export const handleViewSubmission = async (payload, userParam) => {
-//     let user = userParam;
-//     const { values } = payload.view.state;
-//     user.notifications.enabled = true;
-//     user.notifications.days = [];
-//     for (let i = 0; i < values.days_select.days_select_value.selected_options.length; i += 1) {
-//         const theVal = values.days_select.days_select_value.selected_options[i].value;
-//         user.notifications.days.push(theVal);
-//     }
-//     user.notifications.time.hour = values.hour_select.hour_select_value.selected_option.value;
-//     user.notifications.time.minute = values.minute_select.minute_select_value.selected_option.value;
-//     user = await writeUser(user);
-
-//     const blocks = await composeSettingsMsg(user);
-
-//     log.info(`NOTIFICATIONS UPDATED FOR ${user.userName}`);
-
-//     return respondCustom(user.updateSettings.responseUrl, {
-//         replace_original: true,
-//         blocks: blocks.blocks,
-//     });
-// };
-
-// export const clearNotifications = async (payload, userParam) => {
-//     let user = userParam;
-//     user.notifications.enabled = false;
-//     user = await writeUser(user);
-
-//     const blocks = await composeSettingsMsg(user);
-
-//     log.info(`NOTIFICATIONS OFF FOR ${user.userName}`);
-
-//     return respondCustom(payload.response_url, {
-//         replace_original: true,
-//         blocks: blocks.blocks,
-//     });
-// };
-
-// export const sendNotification = async (user) => {
-//     log.info(`Sending notification to ${user.userName}`);
-//     const station = findStation(user.station);
-//     const departures = await getNsData(station);
-//     const msg = await composeDeparturesMsg(user, station, departures);
-
-//     try {
-//         await respondCustom('https://slack.com/api/chat.postMessage', {
-//             channel: user.userId,
-//             text: 'Your daily NS Departures notification is ready to view.',
-//             blocks: msg.blocks,
-//         }, {
-//             headers: { Authorization: `Bearer ${config.get('slack.botToken')}` },
-//         });
-//     } catch (err) {
-//         log.error(err);
-//     }
-// };
+export const respondCustom = async (responseUrl, options) => {
+    try {
+        const result = await axios.post(responseUrl, options);
+        return result;
+    } catch (err) {
+        log.error(err);
+        return false;
+    }
+}

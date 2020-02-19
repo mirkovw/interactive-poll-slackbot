@@ -3,7 +3,7 @@ import config from 'config';
 import express from 'express';
 import http from 'http';
 import bootstrap from './bootstrap';
-import { log } from './utils';
+import { log, getDateStr } from './utils';
 import googleSheet from './google/sheets';
 import { createPoll } from './slack/utils';
 // import cronSchedule from './slack/cron';
@@ -18,6 +18,8 @@ app.start = async () => {
 
     // const mySheet = googleSheet();
     // log.info(mySheet);
+
+    log.info(getDateStr());
 
     const port = config.get('common.port');
     app.set('port', port);

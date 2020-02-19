@@ -31,42 +31,24 @@ router.post('/slack/commands/ns', async (req, res) => {
 router.post('/slack/actions', async (req, res) => {
     try {
         const payload = JSON.parse(req.body.payload);
-        // const { user } = payload; // find user
-
-        // log.info(payload);
 
         if (payload.type === 'block_actions') {
             const [actions] = payload.actions;
 
             if (actions.value === 'pollAnswer') {
-                handlePollAnswer(payload);
+                log.info('Handling poll answer...')
+                await handlePollAnswer(payload);
+                log.info('Poll answer processed');
+
+                log.info('Sending 200 OK response to slack');
+                return res.status(200).json();
             }
         }
-        return res.status(200).json(); // typical ack response
+         // typical ack response
     } catch (err) {
         log.error(err);
         return res.status(500).send('Something blew up. We\'re looking into it.');
     }
-
-    // try {
-    //     const payload = JSON.parse(req.body.payload);
-    //     const user = await findUser(payload.user.id); // find user
-
-    //     if (payload.type === 'block_actions') {
-    //         const [actions] = payload.actions;
-    //         if (actions.action_id === 'updateDefaultStation') await updateDefaultStation(payload, user);
-    //         if (actions.action_id === 'updateNotifications') await updateNotifications(payload, user);
-    //         if (actions.action_id === 'clearNotifications') await clearNotifications(payload, user);
-    //     }
-
-    //     if (payload.type === 'view_submission') {
-    //         await handleViewSubmission(payload, user);
-    //     }
-    //     return res.status(200).json(); // typical ack response
-    // } catch (err) {
-    //     log.error(err);
-    //     return res.status(500).send('Something blew up. We\'re looking into it.');
-    // }
 
     log.info('/slack/actions');
 });
