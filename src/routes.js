@@ -31,17 +31,11 @@ router.post('/slack/commands/ns', async (req, res) => {
 router.post('/slack/actions', async (req, res) => {
     try {
         const payload = JSON.parse(req.body.payload);
-
         if (payload.type === 'block_actions') {
             const [actions] = payload.actions;
-
             if (actions.value === 'pollAnswer') {
-                log.info('Handling poll answer...')
-                await handlePollAnswer(payload);
-                log.info('Poll answer processed');
-
-                log.info('Sending 200 OK response to slack');
-                return res.status(200).json();
+                await handlePollAnswer(payload, res);
+                log.info('Poll answer handled.');
             }
         }
          // typical ack response
@@ -49,8 +43,6 @@ router.post('/slack/actions', async (req, res) => {
         log.error(err);
         return res.status(500).send('Something blew up. We\'re looking into it.');
     }
-
-    log.info('/slack/actions');
 });
 
 export default router;

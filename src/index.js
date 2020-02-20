@@ -5,19 +5,25 @@ import http from 'http';
 import bootstrap from './bootstrap';
 import { log, getDateStr } from './utils';
 import googleSheet from './google/sheets';
-import { createPoll } from './slack/utils';
-// import cronSchedule from './slack/cron';
+import { createPoll, closeCurrentPoll } from './slack/utils';
+import cronSchedule from './cron';
 
 const app = express();
+
+
 
 app.start = async () => {
     log.info('Starting Server now...');
 
-    // cronSchedule.start();
+    //pollStartCrobJob.start();
+    //pollCloseCronJob.start();
+
     createPoll();
 
-    // const mySheet = googleSheet();
-    // log.info(mySheet);
+    setTimeout( () => {
+        log.info("closing poll");
+        closeCurrentPoll();
+    }, 10000 )
 
     log.info(getDateStr());
 

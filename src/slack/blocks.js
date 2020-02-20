@@ -83,7 +83,16 @@ export const composeContextBlock = (str) => {
     }
 }
 
-export const otherMsg = (poll) => {
-    const bar = 'foo';
-    return bar;
+export const composeUpdatedMsg = (payload) => {
+    const originalMsg = payload.message.blocks;
+    if (originalMsg.length === 3) {
+        const newBlock = composeContextBlock('`1 Monk has answered`');
+        originalMsg.splice(2, 0, newBlock);
+
+    } else {
+        let origText = originalMsg[2].elements[0].text;
+        let newText = '`'+(parseInt(origText.substr(1,1))+1) + " Monks have answered"+'`';
+        originalMsg[2].elements[0].text = newText;
+    }
+    return originalMsg;
 };
