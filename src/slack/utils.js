@@ -5,12 +5,16 @@ import {
     getDateStr,
     returnRandom,
     isEmpty,
-    getCellArr,
+    compareValues,
 } from '../utils';
 import {
     composePollMsg,
     composeContextBlock,
     composeUpdatedMsg,
+    composeUpdatedPollMsg,
+    composeMonksAnsweredText,
+    composeUserStatsMsg,
+    composeLeaderboardMsg,
 } from './blocks';
 
 import {
@@ -18,8 +22,35 @@ import {
     updateResults,
     updateUsers,
     checkIfCorrect,
-    checkIfNew,
+    checkIfNew, checkIfPollsAllowed,
 } from '../google/sheets';
+
+const getCellNum = (cellValue) => (isEmpty(cellValue) ? 0 : parseInt(cellValue, 10));
+
+export const handleStatsCommand = async (payload) => {
+    const user = {
+        id: payload.user_id,
+    };
+    const userRows = await getSheetData(2).then((sheet) => sheet.getRows());
+    const [userRow] = userRows.filter((row) => row.UserId === user.id);
+
+    if (userRow !== undefined) {
+        user.wins = getCellNum(userRow.Wins);
+        user.answersCorrect = getCellNum(userRow.Right);
+        user.answersWrong = getCellNum(userRow.Wrong);
+        user.participations = user.answersCorrect + user.answersWrong;
+        const msg = composeUserStatsMsg(user);
+        return { response_type: 'in_channel', blocks: msg.blocks };
+    }
+    return 'User not found. Participate in a poll first.';
+};
+
+export const handleTop10Command = async () => {
+    const userRows = await getSheetData(2).then((sheet) => sheet.getRows());
+    const sortedRows = userRows.sort(compareValues('Wins', 'desc'));
+    const msg = composeLeaderboardMsg(sortedRows);
+    return { response_type: 'in_channel', blocks: msg.blocks };
+};
 
 const findChannels = async () => {
     try {
@@ -46,13 +77,14 @@ const sendMessage = async (url, options) => {
         log.error(err);
         return err;
     }
-}
+};
 
 export const createPoll = async () => {
-    const pollsRows = await getSheetData(0).then((sheet)=>sheet.getRows());
+    const pollsRows = await getSheetData(0).then((sheet) => sheet.getRows());
     const availablePolls = pollsRows.filter((row) => row.PollUsed === 'NO');
     if (availablePolls.length > 0) {
         const randomPoll = returnRandom(availablePolls);
+        log.info(`opening poll id ${randomPoll.UniqueId}`);
         // Add new row in results with UniqueId and DateShown
         const resultsSheet = await getSheetData(1);
         const resultsRows = await resultsSheet.getRows();
@@ -77,18 +109,25 @@ export const createPoll = async () => {
             await newRow.save();
             randomPoll.PollUsed = 'YES'; // set current poll to used: yes
             await randomPoll.save();
-
-        } else {
-            // Respond in channel - cant make new poll
-            const responseStr = 'Can\'t make new poll as there is already a result for this poll in the results list'
-            log.info(responseStr);
-            return false;
+            return true;
         }
-    } else {
-        const responseStr = 'Can\'t make new poll as there are no polls left in the feed.'
+        // Respond in channel - cant make new poll
+        const responseStr = 'Can\'t make new poll as there is already a result for this poll in the results list';
         log.info(responseStr);
         return false;
     }
+    const responseStr = 'Can\'t make new poll as there are no polls left in the feed.';
+    log.info(responseStr);
+    return false;
+};
+
+export const handleNewCommand = async () => {
+    const pollsAllowed = await checkIfPollsAllowed();
+    if (pollsAllowed) {
+        await createPoll();
+        return { response_type: 'ephemeral', text: 'Opened new poll.' };
+    }
+    return { response_type: 'ephemeral', text: 'PollsAllowed setting = OFF' };
 };
 
 export const handlePollAnswer = async (payload, res) => {
@@ -105,7 +144,7 @@ export const handlePollAnswer = async (payload, res) => {
         uniqueId: payload.actions[0].block_id,
     };
 
-    const resultsRows = await getSheetData(1).then((sheet)=>sheet.getRows());
+    const resultsRows = await getSheetData(1).then((sheet) => sheet.getRows());
     const [resultRow] = resultsRows.filter((row) => row.UniqueId === poll.uniqueId);
     answer.new = await checkIfNew(resultRow, poll, user);
     if (!answer.new) {
@@ -120,7 +159,7 @@ export const handlePollAnswer = async (payload, res) => {
 
     answer.correct = await checkIfCorrect(poll, answer);
     if (answer.correct && isEmpty(resultRow.PollWinner)) user.winner = true;
-    await updateResults(resultRow, user, answer);
+    const responsesAmount = await updateResults(resultRow, user, answer);
 
     await res.status(200).json();
 
@@ -129,7 +168,8 @@ export const handlePollAnswer = async (payload, res) => {
     await sendMessage('https://slack.com/api/chat.update', {
         channel: payload.container.channel_id,
         ts: payload.message.ts,
-        blocks: composeUpdatedMsg(payload),
+        text: 'who cares',
+        blocks: composeUpdatedMsg(payload, responsesAmount),
     });
 
     await sendMessage('https://slack.com/api/chat.postEphemeral', {
@@ -137,28 +177,33 @@ export const handlePollAnswer = async (payload, res) => {
         user: payload.user.id,
         blocks: [composeContextBlock('Your answer has been recorded.')],
     });
+
+    return true;
 };
 
-export const closeCurrentPoll = async () => {
-    const resultsRows = await getSheetData(1).then((sheet)=>sheet.getRows());
-    log.info(resultsRows.length);
-
-    log.info('latest poll should be')
-    log.info(resultsRows[resultsRows.length-1]);
-
-    const latestPoll = resultsRows[resultsRows.length - 1];
-
-    log.info(latestPoll.TimeStamp);
-
-    const result = await sendMessage('https://slack.com/api/chat.update', {
-        channel: latestPoll.Channel,
-        ts: latestPoll.TimeStamp,
-        // blocks: composeUpdatedMsg(payload),
-        text: "THIS POLL IS CLOSED",
+export const closePoll = (pollRow, row) => {
+    const resultRow = row;
+    const winnerText = isEmpty(resultRow.PollWinner) ? 'No winner.' : `Winner: <@${resultRow.PollWinner}>!`;
+    const responsesText = isEmpty(resultRow.PollResponses) ? 'No Responses' : composeMonksAnsweredText(resultRow.PollResponses);
+    const msg = composeUpdatedPollMsg(pollRow.PollQuestion, winnerText, responsesText);
+    sendMessage('https://slack.com/api/chat.update', {
+        channel: resultRow.Channel,
+        ts: resultRow.TimeStamp,
+        blocks: msg.blocks,
+        text: 'Poll has closed.',
     });
+    resultRow.Status = 'Closed';
+    resultRow.save();
+};
 
-    log.info(result.data);
+export const closeOpenPolls = async () => {
+    const resultsRows = await getSheetData(1).then((sheet) => sheet.getRows());
+    const pollsRows = await getSheetData(0).then((sheet) => sheet.getRows());
+    const openResults = resultsRows.filter((row) => row.Status === 'Open'); // get polls that are open
 
-
-
-}
+    for (let i = 0; i < openResults.length; i += 1) {
+        log.info(`closing poll id ${openResults[i].UniqueId}`);
+        const [pollRow] = pollsRows.filter((row) => row.UniqueId === openResults[i].UniqueId);
+        closePoll(pollRow, openResults[i]);
+    }
+};

@@ -9,15 +9,20 @@ export const getSheetData = async (index) => {
         client_email: config.get('google.client_email'),
         private_key: config.get('google.private_key'),
     });
-
     await doc.loadInfo();
     return doc.sheetsByIndex[index];
 };
 
 export const checkIfCorrect = async (poll, answer) => {
     const pollsRows = await getSheetData(0).then((sheet) => sheet.getRows());
-    const [ pollRow ]  = pollsRows.filter((row) => row.UniqueId === poll.uniqueId);
+    const [pollRow] = pollsRows.filter((row) => row.UniqueId === poll.uniqueId);
     return pollRow.CorrectOption === answer.value;
+};
+
+export const checkIfPollsAllowed = async () => {
+    const settingsRows = await getSheetData(3).then((sheet) => sheet.getRows());
+    const settings = settingsRows[0];
+    return settings.PollsEnabled === 'ON';
 };
 
 export const checkIfNew = async (resultRow, poll, user) => {
@@ -39,6 +44,7 @@ export const updateResults = async (row, user, answer) => {
     }
     resultRow.PollResponses = responsesRightArr.length + responsesWrongArr.length;
     await resultRow.save();
+    return resultRow.PollResponses;
 };
 
 export const updateUsers = async (user, answer, poll) => {
@@ -57,10 +63,10 @@ export const updateUsers = async (user, answer, poll) => {
     }
 
     if (answer.correct) {
-        userRow.Right = parseInt(userRow.Right) + 1;
-        if (user.winner) userRow.Wins = parseInt(userRow.Wins) + 1;
+        userRow.Right = parseInt(userRow.Right, 10) + 1;
+        if (user.winner) userRow.Wins = parseInt(userRow.Wins, 10) + 1;
     } else {
-        userRow.Wrong = parseInt(userRow.Wrong) + 1;
+        userRow.Wrong = parseInt(userRow.Wrong, 10) + 1;
     }
     const participations = getCellArr(userRow.Participations);
     participations.push(poll.uniqueId);

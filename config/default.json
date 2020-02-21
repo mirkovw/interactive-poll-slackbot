@@ -1,7 +1,7 @@
 {
 	"common": {
 		"port": 3000,
-		"pollStartSchedule":"* * * * *",
-		"pollCloseSchedule":"* * * * *"
+		"pollStartSchedule":"0 15 * * 1,2,3,4,5",
+		"pollCloseSchedule":"0 18 * * 1,2,3,4,5"
 	}
 }

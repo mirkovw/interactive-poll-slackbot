@@ -3,29 +3,16 @@ import config from 'config';
 import express from 'express';
 import http from 'http';
 import bootstrap from './bootstrap';
-import { log, getDateStr } from './utils';
-import googleSheet from './google/sheets';
-import { createPoll, closeCurrentPoll } from './slack/utils';
-import cronSchedule from './cron';
+import { log } from './utils';
+import { pollCloseCronJob, pollStartCrobJob } from './cron';
 
 const app = express();
-
-
 
 app.start = async () => {
     log.info('Starting Server now...');
 
-    //pollStartCrobJob.start();
-    //pollCloseCronJob.start();
-
-    createPoll();
-
-    setTimeout( () => {
-        log.info("closing poll");
-        closeCurrentPoll();
-    }, 10000 )
-
-    log.info(getDateStr());
+    pollStartCrobJob.start();
+    pollCloseCronJob.start();
 
     const port = config.get('common.port');
     app.set('port', port);
