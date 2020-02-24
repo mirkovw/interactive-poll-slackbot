@@ -12,7 +12,7 @@ var _tracer = _interopRequireDefault(require("tracer"));
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
 var add0 = function add0(number) {
-  return number < 10 ? '0' + number.toString() : number;
+  return number < 10 ? "0".concat(number.toString()) : number;
 };
 
 var returnRandom = function returnRandom(arr) {
@@ -49,16 +49,20 @@ var getDateStr = function getDateStr() {
   var day = add0(date.getDate());
   var hour = add0(date.getHours() + date.getTimezoneOffset() / 60 + 1);
   var minute = add0(date.getMinutes());
-  var dateStr = day + '-' + month + '-' + year + ' ' + hour + ':' + minute;
+  var dateStr = "".concat(day, "-").concat(month, "-").concat(year, " ").concat(hour, ":").concat(minute);
   return dateStr;
 };
 
 exports.getDateStr = getDateStr;
 
+var keyExists = function keyExists(obj, key) {
+  return !Object.prototype.hasOwnProperty.call(obj, key);
+};
+
 var compareValues = function compareValues(key) {
   var order = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'asc';
   return function innerSort(a, b) {
-    if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
+    if (!keyExists(a, key) || !keyExists(b, key)) {
       // property doesn't exist on either object
       return 0;
     }

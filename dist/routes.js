@@ -77,7 +77,7 @@ function () {
 
           case 6:
             response = _context2.sent;
-            _context2.next = 23;
+            _context2.next = 29;
             break;
 
           case 9:
@@ -93,7 +93,7 @@ function () {
 
           case 13:
             response = _context2.sent;
-            _context2.next = 23;
+            _context2.next = 29;
             break;
 
           case 16:
@@ -107,29 +107,43 @@ function () {
 
           case 19:
             response = _context2.sent;
-            _context2.next = 23;
+            _context2.next = 29;
             break;
 
           case 22:
+            if (!(payload.text === 'closepolls')) {
+              _context2.next = 28;
+              break;
+            }
+
+            _context2.next = 25;
+            return (0, _utils2.handleCloseCommand)();
+
+          case 25:
+            response = _context2.sent;
+            _context2.next = 29;
+            break;
+
+          case 28:
             response = 'Command not supported';
 
-          case 23:
+          case 29:
             return _context2.abrupt("return", res.status(200).send(response));
 
-          case 26:
-            _context2.prev = 26;
+          case 32:
+            _context2.prev = 32;
             _context2.t0 = _context2["catch"](2);
 
             _utils.log.error(_context2.t0);
 
             return _context2.abrupt("return", res.status(500).send('Something blew up. We\'re looking into it.'));
 
-          case 30:
+          case 36:
           case "end":
             return _context2.stop();
         }
       }
-    }, _callee2, null, [[2, 26]]);
+    }, _callee2, null, [[2, 32]]);
   }));
 
   return function (_x3, _x4) {
@@ -170,23 +184,22 @@ function () {
             _utils.log.info('Poll answer handled.');
 
           case 8:
-            _context3.next = 14;
-            break;
+            return _context3.abrupt("return", true);
 
-          case 10:
-            _context3.prev = 10;
+          case 11:
+            _context3.prev = 11;
             _context3.t0 = _context3["catch"](0);
 
             _utils.log.error(_context3.t0);
 
             return _context3.abrupt("return", res.status(500).send('Something blew up. We\'re looking into it.'));
 
-          case 14:
+          case 15:
           case "end":
             return _context3.stop();
         }
       }
-    }, _callee3, null, [[0, 10]]);
+    }, _callee3, null, [[0, 11]]);
   }));
 
   return function (_x5, _x6) {

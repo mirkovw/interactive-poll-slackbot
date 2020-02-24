@@ -12,10 +12,6 @@ var _bootstrap = _interopRequireDefault(require("./bootstrap"));
 
 var _utils = require("./utils");
 
-var _sheets = _interopRequireDefault(require("./google/sheets"));
-
-var _utils2 = require("./slack/utils");
-
 var _cron = require("./cron");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
@@ -39,14 +35,7 @@ regeneratorRuntime.mark(function _callee() {
 
           _cron.pollStartCrobJob.start();
 
-          _cron.pollCloseCronJob.start(); //createPoll();
-          // setTimeout( () => {
-          //     log.info("closing poll");
-          //     //closeOpenPolls();
-          // }, 12000 )
-
-
-          _utils.log.info((0, _utils.getDateStr)());
+          _cron.pollCloseCronJob.start();
 
           port = _config["default"].get('common.port');
           app.set('port', port);
@@ -66,7 +55,7 @@ regeneratorRuntime.mark(function _callee() {
           });
           server.listen(port);
 
-        case 11:
+        case 10:
         case "end":
           return _context.stop();
       }

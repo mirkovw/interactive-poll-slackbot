@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.closeOpenPolls = exports.closePoll = exports.handlePollAnswer = exports.handleNewCommand = exports.createPoll = exports.handleTop10Command = exports.handleStatsCommand = void 0;
+exports.handleCloseCommand = exports.closeOpenPolls = exports.closePoll = exports.handlePollAnswer = exports.handleNewCommand = exports.createPoll = exports.handleTop10Command = exports.handleStatsCommand = void 0;
 
 var _config = _interopRequireDefault(require("config"));
 
@@ -30,7 +30,7 @@ function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
 var getCellNum = function getCellNum(cellValue) {
-  return (0, _utils.isEmpty)(cellValue) ? 0 : parseInt(cellValue);
+  return (0, _utils.isEmpty)(cellValue) ? 0 : parseInt(cellValue, 10);
 };
 
 var handleStatsCommand =
@@ -153,26 +153,32 @@ function () {
 
           case 3:
             result = _context3.sent;
+
+            _utils.log.info(result.data);
+
             allChannels = result.data.channels;
+
+            _utils.log.info(allChannels);
+
             botChannels = allChannels.filter(function (channel) {
               return channel.is_member === true;
             });
             return _context3.abrupt("return", botChannels);
 
-          case 9:
-            _context3.prev = 9;
+          case 11:
+            _context3.prev = 11;
             _context3.t0 = _context3["catch"](0);
 
             _utils.log.error(_context3.t0);
 
             return _context3.abrupt("return", false);
 
-          case 13:
+          case 15:
           case "end":
             return _context3.stop();
         }
       }
-    }, _callee3, null, [[0, 9]]);
+    }, _callee3, null, [[0, 11]]);
   }));
 
   return function findChannels() {
@@ -186,6 +192,7 @@ function () {
   var _ref4 = _asyncToGenerator(
   /*#__PURE__*/
   regeneratorRuntime.mark(function _callee4(url, options) {
+    var result;
     return regeneratorRuntime.wrap(function _callee4$(_context4) {
       while (1) {
         switch (_context4.prev = _context4.next) {
@@ -199,22 +206,26 @@ function () {
             });
 
           case 3:
-            return _context4.abrupt("return", _context4.sent);
+            result = _context4.sent;
 
-          case 6:
-            _context4.prev = 6;
+            _utils.log.info(result.data);
+
+            return _context4.abrupt("return", result);
+
+          case 8:
+            _context4.prev = 8;
             _context4.t0 = _context4["catch"](0);
 
             _utils.log.error(_context4.t0);
 
             return _context4.abrupt("return", _context4.t0);
 
-          case 10:
+          case 12:
           case "end":
             return _context4.stop();
         }
       }
-    }, _callee4, null, [[0, 6]]);
+    }, _callee4, null, [[0, 8]]);
   }));
 
   return function sendMessage(_x2, _x3) {
@@ -228,7 +239,7 @@ function () {
   var _ref5 = _asyncToGenerator(
   /*#__PURE__*/
   regeneratorRuntime.mark(function _callee5() {
-    var pollsRows, availablePolls, randomPoll, resultsSheet, resultsRows, isNewResult, msg, targetChannels, result, newRow, responseStr, _responseStr;
+    var pollsRows, _ref6, _ref7, settings, availablePolls, randomPoll, resultsSheet, resultsRows, resultRow, msg, result, newRow, _responseStr, responseStr;
 
     return regeneratorRuntime.wrap(function _callee5$(_context5) {
       while (1) {
@@ -241,99 +252,99 @@ function () {
 
           case 2:
             pollsRows = _context5.sent;
+            _context5.next = 5;
+            return (0, _sheets.getSheetData)(3).then(function (sheet) {
+              return sheet.getRows();
+            });
+
+          case 5:
+            _ref6 = _context5.sent;
+            _ref7 = _slicedToArray(_ref6, 1);
+            settings = _ref7[0];
             availablePolls = pollsRows.filter(function (row) {
               return row.PollUsed === 'NO';
             });
 
             if (!(availablePolls.length > 0)) {
-              _context5.next = 37;
+              _context5.next = 36;
               break;
             }
 
             randomPoll = (0, _utils.returnRandom)(availablePolls);
 
-            _utils.log.info('opening poll id ' + randomPoll.UniqueId); // Add new row in results with UniqueId and DateShown
+            _utils.log.info("opening poll id ".concat(randomPoll.UniqueId)); // Add new row in results with UniqueId and DateShown
 
 
-            _context5.next = 9;
+            _context5.next = 14;
             return (0, _sheets.getSheetData)(1);
 
-          case 9:
+          case 14:
             resultsSheet = _context5.sent;
-            _context5.next = 12;
+            _context5.next = 17;
             return resultsSheet.getRows();
 
-          case 12:
+          case 17:
             resultsRows = _context5.sent;
-            isNewResult = resultsRows.filter(function (row) {
+            resultRow = resultsRows.filter(function (row) {
               return row.UniqueId === randomPoll.UniqueId;
-            }).length === 0;
+            });
 
-            if (!isNewResult) {
-              _context5.next = 32;
+            if (!(resultRow.length === 0)) {
+              _context5.next = 33;
               break;
             }
 
             // Compose new poll
             msg = (0, _blocks.composePollMsg)(randomPoll);
-            _context5.next = 18;
-            return findChannels();
-
-          case 18:
-            targetChannels = _context5.sent;
-            _context5.next = 21;
+            _context5.next = 23;
             return sendMessage('https://slack.com/api/chat.postMessage', {
-              channel: targetChannels[targetChannels.length - 1].id,
+              channel: settings.PollChannel,
               text: 'Your daily poll is here.',
+              username: 'Braun Bot',
               blocks: msg.blocks
             });
 
-          case 21:
+          case 23:
             result = _context5.sent;
-            _context5.next = 24;
+            _context5.next = 26;
             return resultsSheet.addRow({
               UniqueId: randomPoll.UniqueId,
               DateShown: (0, _utils.getDateStr)(),
               Status: 'Open',
               TimeStamp: result.data.ts,
-              Channel: targetChannels[targetChannels.length - 1].id
+              Channel: settings.PollChannel
             });
 
-          case 24:
+          case 26:
             newRow = _context5.sent;
-            _context5.next = 27;
+            _context5.next = 29;
             return newRow.save();
 
-          case 27:
+          case 29:
             randomPoll.PollUsed = 'YES'; // set current poll to used: yes
 
-            _context5.next = 30;
+            _context5.next = 32;
             return randomPoll.save();
 
-          case 30:
-            _context5.next = 35;
-            break;
-
           case 32:
+            return _context5.abrupt("return", 'Opened new poll.');
+
+          case 33:
             // Respond in channel - cant make new poll
-            responseStr = 'Can\'t make new poll as there is already a result for this poll in the results list';
-
-            _utils.log.info(responseStr);
-
-            return _context5.abrupt("return", false);
-
-          case 35:
-            _context5.next = 40;
-            break;
-
-          case 37:
-            _responseStr = 'Can\'t make new poll as there are no polls left in the feed.';
+            _responseStr = 'Can\'t make new poll as there is already a result for this poll in the results list';
 
             _utils.log.info(_responseStr);
 
-            return _context5.abrupt("return", false);
+            return _context5.abrupt("return", _responseStr);
 
-          case 40:
+          case 36:
+            responseStr = 'Can\'t make new poll as there are no polls left in the feed.';
+
+            _utils.log.info(responseStr);
+
+            return _context5.abrupt("return", responseStr);
+
+          case 39:
           case "end":
             return _context5.stop();
         }
@@ -351,23 +362,47 @@ exports.createPoll = createPoll;
 var handleNewCommand =
 /*#__PURE__*/
 function () {
-  var _ref6 = _asyncToGenerator(
+  var _ref8 = _asyncToGenerator(
   /*#__PURE__*/
   regeneratorRuntime.mark(function _callee6() {
+    var _ref9, _ref10, settings, result;
+
     return regeneratorRuntime.wrap(function _callee6$(_context6) {
       while (1) {
         switch (_context6.prev = _context6.next) {
           case 0:
             _context6.next = 2;
-            return createPoll();
-
-          case 2:
-            return _context6.abrupt("return", {
-              response_type: 'ephemeral',
-              text: "Opened new poll."
+            return (0, _sheets.getSheetData)(3).then(function (sheet) {
+              return sheet.getRows();
             });
 
-          case 3:
+          case 2:
+            _ref9 = _context6.sent;
+            _ref10 = _slicedToArray(_ref9, 1);
+            settings = _ref10[0];
+
+            if (!(settings.DevModeEnabled === 'ON')) {
+              _context6.next = 10;
+              break;
+            }
+
+            _context6.next = 8;
+            return createPoll();
+
+          case 8:
+            result = _context6.sent;
+            return _context6.abrupt("return", {
+              response_type: 'ephemeral',
+              text: result
+            });
+
+          case 10:
+            return _context6.abrupt("return", {
+              response_type: 'ephemeral',
+              text: 'DevModeEnabled = OFF'
+            });
+
+          case 11:
           case "end":
             return _context6.stop();
         }
@@ -376,7 +411,7 @@ function () {
   }));
 
   return function handleNewCommand() {
-    return _ref6.apply(this, arguments);
+    return _ref8.apply(this, arguments);
   };
 }();
 
@@ -385,10 +420,10 @@ exports.handleNewCommand = handleNewCommand;
 var handlePollAnswer =
 /*#__PURE__*/
 function () {
-  var _ref7 = _asyncToGenerator(
+  var _ref11 = _asyncToGenerator(
   /*#__PURE__*/
   regeneratorRuntime.mark(function _callee7(payload, res) {
-    var user, answer, poll, resultsRows, _resultsRows$filter, _resultsRows$filter2, resultRow, responsesAmount, updatedMsg;
+    var user, answer, poll, resultsRows, _resultsRows$filter, _resultsRows$filter2, resultRow, responsesAmount;
 
     return regeneratorRuntime.wrap(function _callee7$(_context7) {
       while (1) {
@@ -462,18 +497,20 @@ function () {
             return sendMessage('https://slack.com/api/chat.update', {
               channel: payload.container.channel_id,
               ts: payload.message.ts,
-              text: "who cares",
+              text: 'Msg Updated.',
               blocks: (0, _blocks.composeUpdatedMsg)(payload, responsesAmount)
             });
 
           case 27:
-            updatedMsg = _context7.sent;
-            _context7.next = 30;
+            _context7.next = 29;
             return sendMessage('https://slack.com/api/chat.postEphemeral', {
               channel: payload.container.channel_id,
               user: payload.user.id,
               blocks: [(0, _blocks.composeContextBlock)('Your answer has been recorded.')]
             });
+
+          case 29:
+            return _context7.abrupt("return", true);
 
           case 30:
           case "end":
@@ -484,21 +521,22 @@ function () {
   }));
 
   return function handlePollAnswer(_x4, _x5) {
-    return _ref7.apply(this, arguments);
+    return _ref11.apply(this, arguments);
   };
 }();
 
 exports.handlePollAnswer = handlePollAnswer;
 
-var closePoll = function closePoll(pollRow, resultRow) {
-  var winnerText = (0, _utils.isEmpty)(resultRow.PollWinner) ? "No winner." : "Winner: <@" + resultRow.PollWinner + ">!";
+var closePoll = function closePoll(pollRow, row) {
+  var resultRow = row;
+  var winnerText = (0, _utils.isEmpty)(resultRow.PollWinner) ? 'No winner.' : "Winner: <@".concat(resultRow.PollWinner, ">!");
   var responsesText = (0, _utils.isEmpty)(resultRow.PollResponses) ? 'No Responses' : (0, _blocks.composeMonksAnsweredText)(resultRow.PollResponses);
   var msg = (0, _blocks.composeUpdatedPollMsg)(pollRow.PollQuestion, winnerText, responsesText);
   sendMessage('https://slack.com/api/chat.update', {
     channel: resultRow.Channel,
     ts: resultRow.TimeStamp,
     blocks: msg.blocks,
-    text: "Poll has closed."
+    text: 'Poll has closed.'
   });
   resultRow.Status = 'Closed';
   resultRow.save();
@@ -509,7 +547,7 @@ exports.closePoll = closePoll;
 var closeOpenPolls =
 /*#__PURE__*/
 function () {
-  var _ref8 = _asyncToGenerator(
+  var _ref12 = _asyncToGenerator(
   /*#__PURE__*/
   regeneratorRuntime.mark(function _callee8() {
     var resultsRows, pollsRows, openResults, _loop, i;
@@ -537,7 +575,7 @@ function () {
             }); // get polls that are open
 
             _loop = function _loop(i) {
-              _utils.log.info('closing poll id ' + openResults[i].UniqueId);
+              _utils.log.info("closing poll id ".concat(openResults[i].UniqueId));
 
               var _pollsRows$filter = pollsRows.filter(function (row) {
                 return row.UniqueId === openResults[i].UniqueId;
@@ -561,8 +599,65 @@ function () {
   }));
 
   return function closeOpenPolls() {
-    return _ref8.apply(this, arguments);
+    return _ref12.apply(this, arguments);
   };
 }();
 
 exports.closeOpenPolls = closeOpenPolls;
+
+var handleCloseCommand =
+/*#__PURE__*/
+function () {
+  var _ref13 = _asyncToGenerator(
+  /*#__PURE__*/
+  regeneratorRuntime.mark(function _callee9() {
+    var _ref14, _ref15, settings;
+
+    return regeneratorRuntime.wrap(function _callee9$(_context9) {
+      while (1) {
+        switch (_context9.prev = _context9.next) {
+          case 0:
+            _context9.next = 2;
+            return (0, _sheets.getSheetData)(3).then(function (sheet) {
+              return sheet.getRows();
+            });
+
+          case 2:
+            _ref14 = _context9.sent;
+            _ref15 = _slicedToArray(_ref14, 1);
+            settings = _ref15[0];
+
+            if (!(settings.DevModeEnabled === 'ON')) {
+              _context9.next = 9;
+              break;
+            }
+
+            _context9.next = 8;
+            return closeOpenPolls();
+
+          case 8:
+            return _context9.abrupt("return", {
+              response_type: 'ephemeral',
+              text: 'Closed all open polls.'
+            });
+
+          case 9:
+            return _context9.abrupt("return", {
+              response_type: 'ephemeral',
+              text: 'DevModeEnabled = OFF'
+            });
+
+          case 10:
+          case "end":
+            return _context9.stop();
+        }
+      }
+    }, _callee9);
+  }));
+
+  return function handleCloseCommand() {
+    return _ref13.apply(this, arguments);
+  };
+}();
+
+exports.handleCloseCommand = handleCloseCommand;

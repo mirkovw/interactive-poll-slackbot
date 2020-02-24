@@ -60,10 +60,10 @@ var composePollMsg = function composePollMsg(poll) {
 
   var msg = {
     blocks: [{
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "Question:\n*" + poll.PollQuestion + "*"
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: "Question:\n*".concat(poll.PollQuestion, "*")
       }
     }, {
       type: 'actions',
@@ -84,10 +84,10 @@ exports.composePollMsg = composePollMsg;
 
 var composeContextBlock = function composeContextBlock(str) {
   return {
-    "type": "context",
-    "elements": [{
-      "type": "mrkdwn",
-      "text": str
+    type: 'context',
+    elements: [{
+      type: 'mrkdwn',
+      text: str
     }]
   };
 };
@@ -96,7 +96,7 @@ exports.composeContextBlock = composeContextBlock;
 
 var composeMonksAnsweredText = function composeMonksAnsweredText(responsesAmount) {
   if (responsesAmount <= 1) return '1 monk has submitted an answer.';
-  return responsesAmount + ' monks have submitted an answer.';
+  return "".concat(responsesAmount, " monks have submitted an answer.");
 };
 
 exports.composeMonksAnsweredText = composeMonksAnsweredText;
@@ -104,14 +104,14 @@ exports.composeMonksAnsweredText = composeMonksAnsweredText;
 var composeUpdatedMsg = function composeUpdatedMsg(payload, responsesAmount) {
   var originalMsg = payload.message.blocks;
   var newText = composeMonksAnsweredText(responsesAmount);
-  var newBlock = composeContextBlock('`' + newText + '`');
+  var newBlock = composeContextBlock("`".concat(newText, "`"));
 
   if (originalMsg.length === 3) {
     originalMsg.splice(2, 0, newBlock);
     return originalMsg;
   }
 
-  originalMsg[2].elements[0].text = '`' + newText + '`';
+  originalMsg[2].elements[0].text = "`".concat(newText, "`");
   return originalMsg;
 };
 
@@ -119,23 +119,23 @@ exports.composeUpdatedMsg = composeUpdatedMsg;
 
 var composeUpdatedPollMsg = function composeUpdatedPollMsg(pollQuestion, winnerText, responsesText) {
   var msg = {
-    "blocks": [{
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "Question\n*" + pollQuestion + "*"
+    blocks: [{
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: "Question\n*".concat(pollQuestion, "*")
       }
     }, {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "```This poll is closed.\n" + winnerText + "```"
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: "```This poll is closed.\n".concat(winnerText, "```")
       }
     }, {
-      "type": "context",
-      "elements": [{
-        "type": "mrkdwn",
-        "text": '`' + responsesText + '`'
+      type: 'context',
+      elements: [{
+        type: 'mrkdwn',
+        text: "`".concat(responsesText, "`")
       }]
     }]
   };
@@ -146,28 +146,28 @@ exports.composeUpdatedPollMsg = composeUpdatedPollMsg;
 
 var composeUserStatsMsg = function composeUserStatsMsg(user) {
   return {
-    "blocks": [{
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "Braun Bot - Stats for <@" + user.id + ">"
+    blocks: [{
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: "Braun Bot - Stats for <@".concat(user.id, ">")
       }
     }, {
-      "type": "divider"
+      type: 'divider'
     }, {
-      "type": "section",
-      "fields": [{
-        "type": "mrkdwn",
-        "text": "*Wins:*\n" + user.wins + ""
+      type: 'section',
+      fields: [{
+        type: 'mrkdwn',
+        text: "*Wins:*\n".concat(user.wins)
       }, {
-        "type": "mrkdwn",
-        "text": "*Polls participated in:*\n" + user.participations + ""
+        type: 'mrkdwn',
+        text: "*Polls participated in:*\n".concat(user.participations)
       }, {
-        "type": "mrkdwn",
-        "text": "*Correct answers:*\n" + user.answersCorrect + ""
+        type: 'mrkdwn',
+        text: "*Correct answers:*\n".concat(user.answersCorrect)
       }, {
-        "type": "mrkdwn",
-        "text": "*Wrong answers:*\n" + user.answersWrong + ""
+        type: 'mrkdwn',
+        text: "*Wrong answers:*\n".concat(user.answersWrong)
       }]
     }]
   };
@@ -182,26 +182,29 @@ var composeLeaderboardMsg = function composeLeaderboardMsg(users) {
 
   for (var i = 0; i < users.length; i += 1) {
     if (i < 10) {
-      var newStr = users[i].Wins + ' wins - <@' + users[i].UserId + '>'; //usersTextArr.push(users[i].Wins + ' wins - <@' + users[i].UserId + '>')
-
-      usersText += newStr + '\n';
+      var uRight = parseInt(users[i].Right, 10);
+      var uWrong = parseInt(users[i].Wrong, 10);
+      var value = uRight / (uWrong + uRight);
+      var percentage = Math.round(value * 100);
+      var newStr = "".concat(users[i].Wins, " wins - <@").concat(users[i].UserId, "> (").concat(percentage, "% ratio)");
+      usersText += "".concat(newStr, "\n");
     }
   }
 
   var msg = {
-    "blocks": [{
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "Braun Bot - Top 10 Leaderboard"
+    blocks: [{
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: 'Braun Bot - Top 10 Leaderboard'
       }
     }, {
-      "type": "divider"
+      type: 'divider'
     }, {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": usersText
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: usersText
       }
     }]
   };

@@ -5,8 +5,6 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.pollCloseCronJob = exports.pollStartCrobJob = void 0;
 
-var _fs = _interopRequireDefault(require("fs"));
-
 var _config = _interopRequireDefault(require("config"));
 
 var _cron = require("cron");
@@ -14,6 +12,8 @@ var _cron = require("cron");
 var _utils = require("./utils");
 
 var _utils2 = require("./slack/utils");
+
+var _sheets = require("./google/sheets");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
@@ -26,16 +26,36 @@ var pollStartCrobJob = new _cron.CronJob(_config["default"].get('common.pollStar
 _asyncToGenerator(
 /*#__PURE__*/
 regeneratorRuntime.mark(function _callee() {
+  var pollsAllowed;
   return regeneratorRuntime.wrap(function _callee$(_context) {
     while (1) {
       switch (_context.prev = _context.next) {
         case 0:
-          _utils.log.info('Opening new poll');
+          _utils.log.info('Opening new poll'); // check if polls allowed
+
 
           _context.next = 3;
-          return (0, _utils2.createPoll)();
+          return (0, _sheets.checkIfPollsAllowed)();
 
         case 3:
+          pollsAllowed = _context.sent;
+
+          if (!pollsAllowed) {
+            _context.next = 9;
+            break;
+          }
+
+          _context.next = 7;
+          return (0, _utils2.createPoll)();
+
+        case 7:
+          _context.next = 10;
+          break;
+
+        case 9:
+          _utils.log.info('PollsAllowed = false. Not serving polls.');
+
+        case 10:
         case "end":
           return _context.stop();
       }

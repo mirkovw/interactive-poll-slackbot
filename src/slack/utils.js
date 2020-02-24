@@ -59,7 +59,9 @@ const findChannels = async () => {
                 token: config.get('slack.botToken'),
             },
         });
+        log.info(result.data);
         const allChannels = result.data.channels;
+        log.info(allChannels);
         const botChannels = allChannels.filter((channel) => channel.is_member === true);
         return botChannels;
     } catch (err) {
@@ -70,9 +72,11 @@ const findChannels = async () => {
 
 const sendMessage = async (url, options) => {
     try {
-        return await axios.post(url, options, {
+        const result = await axios.post(url, options, {
             headers: { Authorization: `Bearer ${config.get('slack.botToken')}` },
         });
+        log.info(result.data);
+        return result;
     } catch (err) {
         log.error(err);
         return err;
@@ -81,6 +85,7 @@ const sendMessage = async (url, options) => {
 
 export const createPoll = async () => {
     const pollsRows = await getSheetData(0).then((sheet) => sheet.getRows());
+    const [settings] = await getSheetData(3).then((sheet) => sheet.getRows());
     const availablePolls = pollsRows.filter((row) => row.PollUsed === 'NO');
     if (availablePolls.length > 0) {
         const randomPoll = returnRandom(availablePolls);
@@ -92,9 +97,8 @@ export const createPoll = async () => {
         if (resultRow.length === 0) {
             // Compose new poll
             const msg = composePollMsg(randomPoll);
-            const targetChannels = await findChannels();
             const result = await sendMessage('https://slack.com/api/chat.postMessage', {
-                channel: targetChannels[targetChannels.length - 1].id,
+                channel: settings.PollChannel,
                 text: 'Your daily poll is here.',
                 username: 'Braun Bot',
                 blocks: msg.blocks,
@@ -105,7 +109,7 @@ export const createPoll = async () => {
                 DateShown: getDateStr(),
                 Status: 'Open',
                 TimeStamp: result.data.ts,
-                Channel: targetChannels[targetChannels.length - 1].id,
+                Channel: settings.PollChannel,
             });
             await newRow.save();
             randomPoll.PollUsed = 'YES'; // set current poll to used: yes
@@ -169,7 +173,7 @@ export const handlePollAnswer = async (payload, res) => {
     await sendMessage('https://slack.com/api/chat.update', {
         channel: payload.container.channel_id,
         ts: payload.message.ts,
-        text: 'who cares',
+        text: 'Msg Updated.',
         blocks: composeUpdatedMsg(payload, responsesAmount),
     });
 
