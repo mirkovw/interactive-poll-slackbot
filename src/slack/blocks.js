@@ -175,7 +175,9 @@ export const composeLeaderboardMsg = (users) => {
 
     for (let i = 0; i < users.length; i += 1) {
         if (i < 10) {
-            const value = parseInt(users[i].Right, 10) / (parseInt(users[i].Wrong, 10) + parseInt(users[i].Right, 10));
+            const uRight = parseInt(users[i].Right, 10);
+            const uWrong = parseInt(users[i].Wrong, 10);
+            const value = uRight / (uWrong + uRight);
             const percentage = Math.round(value * 100);
             const newStr = `${users[i].Wins} wins - <@${users[i].UserId}> (${percentage}% ratio)`;
             usersText += `${newStr}\n`;

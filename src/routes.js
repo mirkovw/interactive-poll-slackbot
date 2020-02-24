@@ -1,7 +1,7 @@
 import express from 'express';
 import { log } from './utils';
 import {
-    handlePollAnswer, handleStatsCommand, handleTop10Command, handleNewCommand,
+    handlePollAnswer, handleStatsCommand, handleTop10Command, handleNewCommand, handleCloseCommand,
 } from './slack/utils';
 
 const router = new express.Router();
@@ -21,8 +21,10 @@ router.post('/slack/commands/braunbot', async (req, res) => {
         } else if (payload.text === 'top10') {
             log.info('top10');
             response = await handleTop10Command();
-        } else if (payload.text === 'newpoll') {
+        } else if (payload.text === 'newpoll') { // dev command
             response = await handleNewCommand();
+        } else if (payload.text === 'closepolls') { // dev command
+            response = await handleCloseCommand();
         } else {
             response = 'Command not supported';
         }

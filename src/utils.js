@@ -23,13 +23,12 @@ export const getDateStr = () => {
     return dateStr;
 };
 
-
+const keyExists = (obj, key) => !Object.prototype.hasOwnProperty.call(obj, key);
 export const compareValues = (key, order = 'asc') => function innerSort(a, b) {
-    if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
+    if (!keyExists(a, key) || !keyExists(b, key)) {
         // property doesn't exist on either object
         return 0;
     }
-
     const varA = (typeof a[key] === 'string')
         ? a[key].toUpperCase() : a[key];
     const varB = (typeof b[key] === 'string')

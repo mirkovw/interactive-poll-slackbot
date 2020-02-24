@@ -88,14 +88,15 @@ export const createPoll = async () => {
         // Add new row in results with UniqueId and DateShown
         const resultsSheet = await getSheetData(1);
         const resultsRows = await resultsSheet.getRows();
-        const isNewResult = resultsRows.filter((row) => row.UniqueId === randomPoll.UniqueId).length === 0;
-        if (isNewResult) {
+        const resultRow = resultsRows.filter((row) => row.UniqueId === randomPoll.UniqueId);
+        if (resultRow.length === 0) {
             // Compose new poll
             const msg = composePollMsg(randomPoll);
             const targetChannels = await findChannels();
             const result = await sendMessage('https://slack.com/api/chat.postMessage', {
                 channel: targetChannels[targetChannels.length - 1].id,
                 text: 'Your daily poll is here.',
+                username: 'Braun Bot',
                 blocks: msg.blocks,
             });
 
@@ -109,25 +110,25 @@ export const createPoll = async () => {
             await newRow.save();
             randomPoll.PollUsed = 'YES'; // set current poll to used: yes
             await randomPoll.save();
-            return true;
+            return 'Opened new poll.';
         }
         // Respond in channel - cant make new poll
         const responseStr = 'Can\'t make new poll as there is already a result for this poll in the results list';
         log.info(responseStr);
-        return false;
+        return responseStr;
     }
     const responseStr = 'Can\'t make new poll as there are no polls left in the feed.';
     log.info(responseStr);
-    return false;
+    return responseStr;
 };
 
 export const handleNewCommand = async () => {
-    const pollsAllowed = await checkIfPollsAllowed();
-    if (pollsAllowed) {
-        await createPoll();
-        return { response_type: 'ephemeral', text: 'Opened new poll.' };
+    const [settings] = await getSheetData(3).then((sheet) => sheet.getRows());
+    if (settings.DevModeEnabled === 'ON') {
+        const result = await createPoll();
+        return { response_type: 'ephemeral', text: result };
     }
-    return { response_type: 'ephemeral', text: 'PollsAllowed setting = OFF' };
+    return { response_type: 'ephemeral', text: 'DevModeEnabled = OFF' };
 };
 
 export const handlePollAnswer = async (payload, res) => {
@@ -206,4 +207,13 @@ export const closeOpenPolls = async () => {
         const [pollRow] = pollsRows.filter((row) => row.UniqueId === openResults[i].UniqueId);
         closePoll(pollRow, openResults[i]);
     }
+};
+
+export const handleCloseCommand = async () => {
+    const [settings] = await getSheetData(3).then((sheet) => sheet.getRows());
+    if (settings.DevModeEnabled === 'ON') {
+        await closeOpenPolls();
+        return { response_type: 'ephemeral', text: 'Closed all open polls.' };
+    }
+    return { response_type: 'ephemeral', text: 'DevModeEnabled = OFF' };
 };
