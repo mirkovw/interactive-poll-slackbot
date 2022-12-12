@@ -17,7 +17,7 @@
     "body-parser": "^1.18.2",
     "config": "^1.28.1",
     "cron": "^1.8.2",
-    "express": "^4.16.2",
+    "express": "^4.17.3",
     "forever": "^2.0.0",
     "google-spreadsheet": "^3.0.8",
     "morgan": "^1.9.0",
